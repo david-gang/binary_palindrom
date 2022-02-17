@@ -1,0 +1,92 @@
+import com.google.common.collect.Sets
+import com.google.common.math.LongMath
+import kotlinx.coroutines.*
+import kotlin.math.log10
+
+val FIRST_DIGITS= setOf(1UL, 3UL, 5UL, 7UL, 9UL)
+val ALL_DIGITS = setOf(0UL, 1UL, 2UL, 3UL, 4UL, 5UL, 6UL, 7UL, 8UL, 9UL)
+
+suspend fun main() {
+    val before = System.currentTimeMillis()
+    val longMask = ULongArray(Long.SIZE_BITS) {
+        1UL shl it
+    }
+    val max10 = log10(ULong.MAX_VALUE.toDouble()).toInt()
+    val tenExponents = ULongArray(max10){
+        LongMath.pow(10, it).toULong()
+    }
+    // 0 is palindrome 0 in every base
+    println(0)
+    println(tenExponents.size)
+//    coroutineScope {
+        for(i in 1 until tenExponents.size - 1) {
+//            launch(Dispatchers.Default) {
+                checkAllPalindromesForMagnitude(i, tenExponents, longMask)
+//            }
+
+        }
+//    }
+
+    val after = System.currentTimeMillis()
+    println((after - before)/1000)
+
+}
+//fun checksingleDigitPalindromes(tenExponents: ULongArray, longMask: ULongArray) {
+//    val maxBitIndex = 3
+//    for(num in listOf(1UL, 3UL, 5UL, 7UL,9UL)) {
+//        if(isBinaryPalindrome(num, 3, longMask)) {
+//            println(num)
+//        }
+//    }
+//
+//}
+
+fun checkAllPalindromesForMagnitude(magnitude: Int, tenExponents: ULongArray, longMask: ULongArray) {
+    println("launching $magnitude")
+    val biggestNum = tenExponents[magnitude + 1]
+    val maxBitIndex = ULong.SIZE_BITS - biggestNum.countLeadingZeroBits() - 1
+    val n = (magnitude +1)/2
+    val isOdd = magnitude %2 == 1
+    val sets = arrayOfNulls<Set<ULong>>(n)
+    sets[0] = FIRST_DIGITS
+    for (i in 1 until n) {
+        sets[i] = ALL_DIGITS
+    }
+
+    for (product in Sets.cartesianProduct(*sets)) {
+        var num = 0UL
+        for(i in 0 until n) {
+            num += tenExponents[i] * product[i]
+        }
+        val highest = if(isOdd) {
+            n - 2
+        }
+        else {
+            n - 1
+        }
+        for ( i in highest downTo 0) {
+            num += tenExponents[n + (highest - i)] * product[i]
+        }
+        if(isBinaryPalindrome(num, maxBitIndex, longMask)) {
+            println(num)
+        }
+    }
+
+
+}
+
+fun isBinaryPalindrome(n:ULong, maxBitIndex:Int, longMask: ULongArray): Boolean {
+    var highestBitIndex = maxBitIndex
+    while(n and longMask[highestBitIndex] == 0UL) {
+        highestBitIndex--
+    }
+    val loops = (highestBitIndex + 1)/2
+    for (i in 1 until  loops){
+        val lowBit = (n shr i) and 1UL
+        val highBit = (n shr (highestBitIndex-i)) and 1UL
+        if(lowBit != highBit) {
+            return false
+        }
+    }
+    return true
+}
