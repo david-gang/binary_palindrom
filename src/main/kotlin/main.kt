@@ -98,13 +98,14 @@ suspend fun main() {
 
 val bigIntegerDigits = (0..9).map { it.toBigInteger() }.toTypedArray()
 val bigtenExponents = (0..100).map { BigInteger.TEN.pow(it) }.toTypedArray()
+val bigNineExponents = bigtenExponents.map { it * 9.toBigInteger() }.toTypedArray()
 suspend fun checkAllPalindromesForMagnitudeBig(magnitude: Int, counter: AtomicInteger) {
     println("launching big $magnitude")
     supervisorScope {
         for( i in 1..9 step 2) {
             for(j in 0..9) {
                 launch(Dispatchers.Default) {
-                    val high = BigInteger.TEN.pow(magnitude -1) * bigIntegerDigits[i] + bigIntegerDigits[j] * BigInteger.TEN.pow(magnitude -2)
+                    val high = bigtenExponents[magnitude -1] * bigIntegerDigits[i] + bigIntegerDigits[j] * bigtenExponents[magnitude -2]
                     val low = BigInteger.TEN * bigIntegerDigits[j] + bigIntegerDigits[i]
                     checkAllPalindromesForMagnitudeBigRecursive(high, low, 2, magnitude)
                 }
@@ -127,10 +128,7 @@ fun checkAllPalindromesForMagnitudeBigRecursive(high: BigInteger, low: BigIntege
         }
         return
     }
-    var nine = BigInteger.ZERO
-    for(i in 0 until remaining) {
-        nine += bigtenExponents[i + rightSide] * bigIntegerDigits[9]
-    }
+    var nine = (0 until remaining).sumOf{bigNineExponents[it]}
     val biggestNum = nine + num
     val biggestLength = biggestNum.bitLength()
 
