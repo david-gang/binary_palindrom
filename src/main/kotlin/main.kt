@@ -10,8 +10,6 @@ import kotlin.math.log10
 
 val FIRST_DIGITS= setOf(1L, 3L, 5L, 7L, 9L)
 val ALL_DIGITS = setOf(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L)
-val FIRST_DIGITS_STRING = longArrayOf(1, 3, 5, 7, 9)
-val ALL_DIGITS_STRING = longArrayOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
 val launcherDispatcher = Dispatchers.IO.limitedParallelism(1)
 
 fun createCollector(): (Pair<Int, String>) -> Unit {
@@ -84,8 +82,8 @@ suspend fun main() {
         }
         val counter = AtomicInteger(tenExponents.size - 1)
         print("atomic "+counter.get())
-        for (i in tenExponents.size - 1 until tenExponents.size + 5) {
-            withContext(launcherDispatcher) {
+        withContext(launcherDispatcher) {
+            for (i in tenExponents.size - 1 until tenExponents.size + 11) {
                 checkAllPalindromesForMagnitudeBig(i,counter)
             }
         }
@@ -97,111 +95,71 @@ suspend fun main() {
 
 }
 
-fun cartesianLongProduct(vararg lists: LongArray): Sequence<LongArray>  = sequence{
-    var index = IntArray(lists.size)
-    val lastIndex = lists.size -1
-    while(true) {
-        val charPerm = LongArray(lists.size) {
-            lists[it][index[it]]
-        }
-        yield(charPerm)
 
-        var i = lastIndex
-        index[lastIndex]++
-        while(index[i] == lists[i].size) {
-            index[i] =0
-            i--
-            if(i== -1) {
-                return@sequence
-            }
-            index[i]++
-        }
-    }
-
-
-}
-private class BatchConstants(val batchFactor:BigInteger, val big: BigInteger, val small: BigInteger)
-
-private fun createBatchConstant(n:Int, permutation: LongArray): BatchConstants {
-    val tenDigits = createTenDigits(n)
-
-    var small = BigInteger.ONE * BigInteger.valueOf(permutation[0])
-    for(i in 1..permutation.lastIndex) {
-        small += BigInteger.valueOf(permutation[i]) * tenDigits[i]
-    }
-    var big = BigInteger.valueOf(permutation[0]) * tenDigits.last()
-    for(i in 1 .. permutation.lastIndex) {
-        big += BigInteger.valueOf(permutation[i]) * tenDigits[tenDigits.lastIndex - i]
-    }
-    return BatchConstants(small = small, big = big, batchFactor = tenDigits[permutation.size])
-
-}
-
-private fun createTenDigits(n: Int): Array<BigInteger> {
-    val tenDigits = arrayOfNulls<BigInteger>(n)
-    tenDigits[0] = BigInteger.ONE
-    tenDigits[1] = BigInteger.TEN
-    for (i in 2 until tenDigits.size) {
-        tenDigits[i] = tenDigits[i-1]!! * BigInteger.TEN
-    }
-    return tenDigits as Array<BigInteger>
-}
-
-private val batchList = cartesianLongProduct(ALL_DIGITS_STRING,ALL_DIGITS_STRING,ALL_DIGITS_STRING,ALL_DIGITS_STRING, ALL_DIGITS_STRING, ALL_DIGITS_STRING).toList()
-suspend fun makePalindromBatch(ticketNum:Int, magnitude: Int, permutation: LongArray) {
-   val batchConstants = createBatchConstant(magnitude, permutation)
-
-    val batchItemSize = batchList[0].size
-    val isOdd = magnitude %2 == 1
-    val highest = if(isOdd) {
-        batchItemSize - 2
-    }
-    else {
-        batchItemSize - 1
-    }
-    val baseNum = batchConstants.big + batchConstants.small
-
-    for(b in batchList) {
-        var batchNum = 0L
-        for (i in b.indices) {
-            batchNum += b[i] * tenExponents[i]
-        }
-
-        for(i in 0 .. highest) {
-            batchNum += b[highest - i] * tenExponents[i + b.size]
-        }
-        val bigNum = BigInteger.valueOf(batchNum) * batchConstants.batchFactor + baseNum
-        if(isBinaryPalindrome(bigNum)) {
-            sharedFlow.emit(ticketNum to bigNum.toString())
-        }
-
-    }
-    sharedFlow.emit(ticketNum to "")
-
-}
+val bigIntegerDigits = (0..9).map { it.toBigInteger() }.toTypedArray()
+val bigtenExponents = (0..100).map { BigInteger.TEN.pow(it) }.toTypedArray()
 suspend fun checkAllPalindromesForMagnitudeBig(magnitude: Int, counter: AtomicInteger) {
     println("launching big $magnitude")
-    val n = (magnitude +1)/2
-    val sets = Array(n - batchList[0].size) {
-        if(it == 0){
-            FIRST_DIGITS_STRING
-        }
-        else {
-            ALL_DIGITS_STRING
-        }
-    }
-
-    coroutineScope {
-        for (product in cartesianLongProduct(*sets)) {
-            launch(Dispatchers.Default) {
-                makePalindromBatch(counter.getAndIncrement(), magnitude, product)
+    supervisorScope {
+        for( i in 1..9 step 2) {
+            for(j in 0..9) {
+                launch(Dispatchers.Default) {
+                    val high = BigInteger.TEN.pow(magnitude -1) * bigIntegerDigits[i] + bigIntegerDigits[j] * BigInteger.TEN.pow(magnitude -2)
+                    val low = BigInteger.TEN * bigIntegerDigits[j] + bigIntegerDigits[i]
+                    checkAllPalindromesForMagnitudeBigRecursive(high, low, 2, magnitude)
+                }
             }
-
-        }
     }
-
+    }
 
     println("ended $magnitude")
+}
+
+
+fun checkAllPalindromesForMagnitudeBigRecursive(high: BigInteger, low: BigInteger, edgeSize: Int, magnitude: Int) {
+    val rightSide = edgeSize
+    val remaining = magnitude - 2*edgeSize
+    val num = high + low
+    val numLength = num.bitLength()
+    if(remaining <= 0) {
+        if(isBinaryPalindrome(num)) {
+            println("found $num")
+        }
+        return
+    }
+    var nine = BigInteger.ZERO
+    for(i in 0 until remaining) {
+        nine += bigtenExponents[i + rightSide] * bigIntegerDigits[9]
+    }
+    val biggestNum = nine + num
+    val biggestLength = biggestNum.bitLength()
+
+
+    if(biggestLength == numLength) {
+        var leftSide = 0
+        val numHighestIndex = numLength - 1
+        while(leftSide < rightSide && num.testBit(numHighestIndex -  leftSide) == biggestNum.testBit(numHighestIndex - leftSide))
+        {
+            leftSide ++
+        }
+        for(i in 1 until leftSide) {
+            if(num.testBit(numHighestIndex - i)!= num.testBit(i)) {
+                return
+            }
+        }
+    }
+
+    if(remaining == 1) {
+        for(i in 0..9) {
+            checkAllPalindromesForMagnitudeBigRecursive(high, low + (bigIntegerDigits[i]* bigtenExponents[edgeSize]), edgeSize + 1, magnitude)
+        }
+    }
+    else {
+        for(i in 0..9) {
+            checkAllPalindromesForMagnitudeBigRecursive(high+ bigtenExponents[magnitude - edgeSize -1]*bigIntegerDigits[i], low + bigIntegerDigits[i]* bigtenExponents[edgeSize], edgeSize + 1, magnitude)
+        }
+    }
+
 }
 
 suspend fun checkAllPalindromesForMagnitude(magnitude: Int, tenExponents: LongArray, longMask: LongArray) {
