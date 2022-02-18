@@ -82,9 +82,12 @@ suspend fun main() {
         }
         val counter = AtomicInteger(tenExponents.size - 1)
         print("atomic "+counter.get())
-        withContext(launcherDispatcher) {
-            for (i in tenExponents.size - 1 until tenExponents.size + 11) {
-                checkAllPalindromesForMagnitudeBig(i,counter)
+            for (i in tenExponents.size - 1 until tenExponents.size + 12) {
+                launch(launcherDispatcher) {
+                    checkAllPalindromesForMagnitudeBig(i,counter)
+                    val after = System.currentTimeMillis()
+                    val time = (after - before)/1000
+                    println("$i ended after $time")
             }
         }
     }
@@ -151,14 +154,21 @@ fun checkAllPalindromesForMagnitudeBigRecursive(high: BigInteger, low: BigIntege
     }
 
     val newNine = bigtenExponents[magnitude - edgeSize - 1] - bigtenExponents[edgeSize + 1]
+    checkAllPalindromesForMagnitudeBigRecursive(high, low, newNine, edgeSize + 1, magnitude)
     if(remaining == 1) {
-        for(i in 0..9) {
-            checkAllPalindromesForMagnitudeBigRecursive(high, low + (bigIntegerDigits[i]* bigtenExponents[edgeSize]), newNine, edgeSize + 1, magnitude)
+        var lowCounter = low
+        for(i in 1..9) {
+            lowCounter += bigtenExponents[edgeSize]
+            checkAllPalindromesForMagnitudeBigRecursive(high, lowCounter, newNine, edgeSize + 1, magnitude)
         }
     }
     else {
-        for(i in 0..9) {
-            checkAllPalindromesForMagnitudeBigRecursive(high+ bigtenExponents[magnitude - edgeSize -1]*bigIntegerDigits[i], low + bigIntegerDigits[i]* bigtenExponents[edgeSize], newNine, edgeSize + 1, magnitude)
+        var lowCounter = low
+        var highCounter = high
+        for(i in 1..9) {
+            lowCounter += bigtenExponents[edgeSize]
+            highCounter += bigtenExponents[magnitude - edgeSize -1]
+            checkAllPalindromesForMagnitudeBigRecursive(highCounter, lowCounter, newNine, edgeSize + 1, magnitude)
         }
     }
 
