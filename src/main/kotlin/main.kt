@@ -125,7 +125,6 @@ suspend fun checkAllPalindromesForMagnitudeBig(magnitude: Int, counter: AtomicIn
 
 
 fun checkAllPalindromesForMagnitudeBigRecursive(high: BigInteger, low: BigInteger, nine:BigInteger, edgeSize: Int, magnitude: Int) {
-    val rightSide = edgeSize
     val remaining = magnitude - 2*edgeSize
     val num = high + low
     val numLength = num.bitLength()
@@ -142,7 +141,7 @@ fun checkAllPalindromesForMagnitudeBigRecursive(high: BigInteger, low: BigIntege
     if(biggestLength == numLength) {
         var leftSide = 0
         val numHighestIndex = numLength - 1
-        while(leftSide < rightSide && num.testBit(numHighestIndex -  leftSide) == biggestNum.testBit(numHighestIndex - leftSide))
+        while(leftSide < edgeSize && num.testBit(numHighestIndex - leftSide) == biggestNum.testBit(numHighestIndex - leftSide))
         {
             leftSide ++
         }
