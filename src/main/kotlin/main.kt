@@ -101,13 +101,17 @@ val bigtenExponents = (0..100).map { BigInteger.TEN.pow(it) }.toTypedArray()
 val bigNineExponents = bigtenExponents.map { it * 9.toBigInteger() }.toTypedArray()
 suspend fun checkAllPalindromesForMagnitudeBig(magnitude: Int, counter: AtomicInteger) {
     println("launching big $magnitude")
+    val edgeSize = 2
+    val nine = bigtenExponents[magnitude - edgeSize] - bigtenExponents[edgeSize]
     supervisorScope {
         for( i in 1..9 step 2) {
+            val highI = bigtenExponents[magnitude -1] * bigIntegerDigits[i]
+            val lowI = bigIntegerDigits[i]
             for(j in 0..9) {
                 launch(Dispatchers.Default) {
-                    val high = bigtenExponents[magnitude -1] * bigIntegerDigits[i] + bigIntegerDigits[j] * bigtenExponents[magnitude -2]
-                    val low = BigInteger.TEN * bigIntegerDigits[j] + bigIntegerDigits[i]
-                    checkAllPalindromesForMagnitudeBigRecursive(high, low, 2, magnitude)
+                    val high =  highI + bigIntegerDigits[j] * bigtenExponents[magnitude -2]
+                    val low = BigInteger.TEN * bigIntegerDigits[j] + lowI
+                    checkAllPalindromesForMagnitudeBigRecursive(high, low, nine, 2, magnitude)
                 }
             }
     }
@@ -117,7 +121,7 @@ suspend fun checkAllPalindromesForMagnitudeBig(magnitude: Int, counter: AtomicIn
 }
 
 
-fun checkAllPalindromesForMagnitudeBigRecursive(high: BigInteger, low: BigInteger, edgeSize: Int, magnitude: Int) {
+fun checkAllPalindromesForMagnitudeBigRecursive(high: BigInteger, low: BigInteger, nine:BigInteger, edgeSize: Int, magnitude: Int) {
     val rightSide = edgeSize
     val remaining = magnitude - 2*edgeSize
     val num = high + low
@@ -128,7 +132,6 @@ fun checkAllPalindromesForMagnitudeBigRecursive(high: BigInteger, low: BigIntege
         }
         return
     }
-    var nine = (0 until remaining).sumOf{bigNineExponents[it]}
     val biggestNum = nine + num
     val biggestLength = biggestNum.bitLength()
 
@@ -147,14 +150,15 @@ fun checkAllPalindromesForMagnitudeBigRecursive(high: BigInteger, low: BigIntege
         }
     }
 
+    val newNine = bigtenExponents[magnitude - edgeSize - 1] - bigtenExponents[edgeSize + 1]
     if(remaining == 1) {
         for(i in 0..9) {
-            checkAllPalindromesForMagnitudeBigRecursive(high, low + (bigIntegerDigits[i]* bigtenExponents[edgeSize]), edgeSize + 1, magnitude)
+            checkAllPalindromesForMagnitudeBigRecursive(high, low + (bigIntegerDigits[i]* bigtenExponents[edgeSize]), newNine, edgeSize + 1, magnitude)
         }
     }
     else {
         for(i in 0..9) {
-            checkAllPalindromesForMagnitudeBigRecursive(high+ bigtenExponents[magnitude - edgeSize -1]*bigIntegerDigits[i], low + bigIntegerDigits[i]* bigtenExponents[edgeSize], edgeSize + 1, magnitude)
+            checkAllPalindromesForMagnitudeBigRecursive(high+ bigtenExponents[magnitude - edgeSize -1]*bigIntegerDigits[i], low + bigIntegerDigits[i]* bigtenExponents[edgeSize], newNine, edgeSize + 1, magnitude)
         }
     }
 
