@@ -171,7 +171,12 @@ fun checkAllPalindromesForMagnitudeBigRecursive(
         }
     }
 
-    val newNine = bigNineDifferences[EXPONENT_LIMIT * (edgeSize + 1) + magnitude - edgeSize - 1]
+    val newNine = if(remaining>2) {
+        bigNineDifferences[EXPONENT_LIMIT * (edgeSize + 1) + magnitude - edgeSize - 1]
+    }
+    else {
+        nine
+    }
     checkAllPalindromesForMagnitudeBigRecursive(high, low, newNine, edgeSize + 1, magnitude, ticket)
     if (remaining == 1) {
         var lowCounter = low
