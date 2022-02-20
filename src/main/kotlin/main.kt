@@ -74,7 +74,7 @@ suspend fun main() {
     // 0 is palindrome 0 in every base
     println(0)
     supervisorScope {
-        for(i in 1 until tenExponents.size - 1) {
+        for(i in 1 until 5) {
             println("launching $i")
             launch(Dispatchers.Default) {
                 checkAllPalindromesForMagnitude(i, tenExponents, longMask)
@@ -82,7 +82,7 @@ suspend fun main() {
         }
         val counter = AtomicInteger(tenExponents.size - 1)
         print("atomic "+counter.get())
-            for (i in tenExponents.size - 1 until tenExponents.size + 12) {
+            for (i in 5 until tenExponents.size + 12) {
                 launch(launcherDispatcher) {
                     checkAllPalindromesForMagnitudeBig(i,counter)
                     val after = System.currentTimeMillis()
@@ -101,7 +101,6 @@ suspend fun main() {
 
 val bigIntegerDigits = (0..9).map { it.toBigInteger() }.toTypedArray()
 val bigtenExponents = (0..100).map { BigInteger.TEN.pow(it) }.toTypedArray()
-val bigNineExponents = bigtenExponents.map { it * 9.toBigInteger() }.toTypedArray()
 suspend fun checkAllPalindromesForMagnitudeBig(magnitude: Int, counter: AtomicInteger) {
     println("launching big $magnitude")
     val edgeSize = 2
@@ -127,18 +126,18 @@ suspend fun checkAllPalindromesForMagnitudeBig(magnitude: Int, counter: AtomicIn
 fun checkAllPalindromesForMagnitudeBigRecursive(high: BigInteger, low: BigInteger, nine:BigInteger, edgeSize: Int, magnitude: Int) {
     val remaining = magnitude - 2*edgeSize
     val num = high + low
-    val numLength = num.bitLength()
     if(remaining <= 0) {
         if(isBinaryPalindrome(num)) {
             println("found $num")
         }
         return
     }
+
+    val numLength = num.bitLength()
     val biggestNum = nine + num
-    val biggestLength = biggestNum.bitLength()
 
 
-    if(biggestLength == numLength) {
+    if(!biggestNum.testBit(numLength)) {
         var leftSide = 0
         val numHighestIndex = numLength - 1
         while(leftSide < edgeSize && num.testBit(numHighestIndex - leftSide) == biggestNum.testBit(numHighestIndex - leftSide))

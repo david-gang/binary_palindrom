@@ -15,6 +15,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
 }
 
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java){
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
 tasks.jar {
     manifest {
         attributes["Main-Class"] = "MainKt"
