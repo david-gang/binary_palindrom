@@ -120,8 +120,8 @@ suspend fun checkAllPalindromesForMagnitudeBig(magnitude: Int, counter: AtomicIn
             val highI = bigtenExponents[magnitude - 1] * bigIntegerDigits[i]
             val lowI = bigIntegerDigits[i]
             for (j in 0..9) {
+                val ticket = counter.getAndIncrement()
                 launch(Dispatchers.Default) {
-                    val ticket = counter.getAndIncrement()
                     try {
                         val high = highI + bigIntegerDigits[j] * bigtenExponents[magnitude - 2]
                         val low = BigInteger.TEN * bigIntegerDigits[j] + lowI
