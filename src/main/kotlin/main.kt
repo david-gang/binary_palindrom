@@ -83,7 +83,7 @@ suspend fun main() {
             }
         }
         val counter = AtomicInteger(5)
-        for (i in 5 until tenExponents.size + 12) {
+        for (i in 5 .. 29) {
             launch(launcherDispatcher) {
                 checkAllPalindromesForMagnitudeBig(i, counter)
             }
@@ -125,7 +125,16 @@ suspend fun checkAllPalindromesForMagnitudeBig(magnitude: Int, counter: AtomicIn
                     try {
                         val high = highI + bigIntegerDigits[j] * bigtenExponents[magnitude - 2]
                         val low = BigInteger.TEN * bigIntegerDigits[j] + lowI
-                        checkAllPalindromesForMagnitudeBigRecursive(high, low, nine, 2, magnitude, ticket)
+                        checkAllPalindromesForMagnitudeBigRecursive(
+                            high = high,
+                            low = low,
+                            nine = nine,
+                            edgeSize = 2,
+                            magnitude = magnitude,
+                            ticket = ticket,
+                            primeBitsTillNow = 0,
+                            numLengthIn = 0
+                        )
                     } finally {
                         sharedFlow.emit(ticket to "")
                     }
@@ -143,23 +152,34 @@ fun checkAllPalindromesForMagnitudeBigRecursive(
     nine: BigInteger,
     edgeSize: Int,
     magnitude: Int,
-    ticket: Int
+    ticket: Int,
+    primeBitsTillNow: Int,
+    numLengthIn : Int
 ) {
     val remaining = magnitude - 2 * edgeSize
     val num = high + low
-    if (remaining <= 0) {
-        if (isBinaryPalindrome(num)) {
+    if (remaining ==0 || remaining == -1) {
+        if (isBinaryPalindrome(num, primeBitsTillNow)) {
             sharedFlow.tryEmit(ticket to num.toString())
         }
         return
     }
 
-    val numLength = num.bitLength()
+    val numLength = if(numLengthIn == 0) {
+        num.bitLength()
+    }
+    else {
+        numLengthIn
+    }
+    var newNumLengthIn = 0
+
     val biggestNum = nine + num
 
 
+    var leftSide =  primeBitsTillNow
+
     if (!biggestNum.testBit(numLength)) {
-        var leftSide = 0
+        newNumLengthIn = numLengthIn
         val numHighestIndex = numLength - 1
         while (leftSide < edgeSize && num.testBit(numHighestIndex - leftSide) == biggestNum.testBit(numHighestIndex - leftSide)) {
             leftSide++
@@ -171,18 +191,35 @@ fun checkAllPalindromesForMagnitudeBigRecursive(
         }
     }
 
-    val newNine = if(remaining>2) {
+    val newNine = if (remaining > 2) {
         bigNineDifferences[EXPONENT_LIMIT * (edgeSize + 1) + magnitude - edgeSize - 1]
-    }
-    else {
+    } else {
         nine
     }
-    checkAllPalindromesForMagnitudeBigRecursive(high, low, newNine, edgeSize + 1, magnitude, ticket)
+    checkAllPalindromesForMagnitudeBigRecursive(
+        high = high,
+        low = low,
+        nine = newNine,
+        edgeSize = edgeSize + 1,
+        magnitude = magnitude,
+        ticket = ticket,
+        primeBitsTillNow = leftSide,
+        numLengthIn = newNumLengthIn
+    )
     if (remaining == 1) {
         var lowCounter = low
         for (i in 1..9) {
             lowCounter += bigtenExponents[edgeSize]
-            checkAllPalindromesForMagnitudeBigRecursive(high, lowCounter, newNine, edgeSize + 1, magnitude, ticket)
+            checkAllPalindromesForMagnitudeBigRecursive(
+                high = high,
+                low = lowCounter,
+                nine = newNine,
+                edgeSize = edgeSize + 1,
+                magnitude = magnitude,
+                ticket = ticket,
+                primeBitsTillNow = leftSide,
+                numLengthIn = newNumLengthIn
+            )
         }
     } else {
         var lowCounter = low
@@ -191,12 +228,14 @@ fun checkAllPalindromesForMagnitudeBigRecursive(
             lowCounter += bigtenExponents[edgeSize]
             highCounter += bigtenExponents[magnitude - edgeSize - 1]
             checkAllPalindromesForMagnitudeBigRecursive(
-                highCounter,
-                lowCounter,
-                newNine,
-                edgeSize + 1,
-                magnitude,
-                ticket
+                high=highCounter,
+                low=lowCounter,
+                nine=newNine,
+                edgeSize = edgeSize + 1,
+               magnitude =  magnitude,
+                ticket = ticket,
+                primeBitsTillNow = leftSide,
+                numLengthIn = newNumLengthIn
             )
         }
     }
@@ -234,10 +273,10 @@ suspend fun checkAllPalindromesForMagnitude(magnitude: Int, tenExponents: LongAr
     sharedFlow.emit(magnitude to "")
 }
 
-fun isBinaryPalindrome(n: BigInteger): Boolean {
+fun isBinaryPalindrome(n: BigInteger, primeBitsTillNow: Int): Boolean {
     val highestBitIndex = n.bitLength() - 1
     val loops = (highestBitIndex + 1) / 2
-    for (i in 1 until loops) {
+    for (i in primeBitsTillNow until loops) {
         val lowBit = n.testBit(i)
         val highBit = n.testBit(highestBitIndex - i)
         if (lowBit != highBit) {
