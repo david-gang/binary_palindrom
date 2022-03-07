@@ -52,15 +52,15 @@ fun createCollector(): (Pair<Int, String>) -> Unit {
 
 val sharedFlow = MutableSharedFlow<Pair<Int, String>>(extraBufferCapacity = 128)
 val max10 = log10(Long.MAX_VALUE.toDouble()).toInt()
-val tenExponents = LongArray(max10) {
+val LONG_TEN_EXPONENTS = LongArray(max10) {
     LongMath.pow(10, it)
 }
 val bigIntegerDigits = (0..9).map { it.toBigInteger() }.toTypedArray()
-val bigtenExponents = (0..100).map { BigInteger.TEN.pow(it) }.toTypedArray()
+val BIG_TEN_EXPONENTS = (0..100).map { BigInteger.TEN.pow(it) }.toTypedArray()
 
 // when we want to run more than 10 minutes we need to make it bigger but this is not important now
 const val EXPONENT_LIMIT = 50
-val bigNineDifferences = getBigNineDifferences(bigtenExponents)
+val bigNineDifferences = getBigNineDifferences(BIG_TEN_EXPONENTS)
 
 suspend fun main() {
 
@@ -80,7 +80,7 @@ suspend fun main() {
         // first find all long values
         for (i in 1 until 5) {
             launch(Dispatchers.Default) {
-                checkAllPalindromesForDecimalLength(i, tenExponents, longMask)
+                checkAllPalindromesForDecimalLength(i, longMask)
             }
         }
         val counter = AtomicInteger(5)
@@ -118,13 +118,13 @@ suspend fun checkAllBigNumberPalindromesForDecimalLength(length: Int, counter: A
     val nine = bigNineDifferences[EXPONENT_LIMIT * edgeSize + length - edgeSize]
     supervisorScope {
         for (i in 1..9 step 2) {
-            val highI = bigtenExponents[length - 1] * bigIntegerDigits[i]
+            val highI = BIG_TEN_EXPONENTS[length - 1] * bigIntegerDigits[i]
             val lowI = bigIntegerDigits[i]
             for (j in 0..9) {
                 val ticket = counter.getAndIncrement()
                 launch(Dispatchers.Default) {
                     try {
-                        val high = highI + bigIntegerDigits[j] * bigtenExponents[length - 2]
+                        val high = highI + bigIntegerDigits[j] * BIG_TEN_EXPONENTS[length - 2]
                         val low = BigInteger.TEN * bigIntegerDigits[j] + lowI
                         checkAllBigNumberPalindromesForDecimalLengthRecursive(
                             high = high,
@@ -209,7 +209,7 @@ fun checkAllBigNumberPalindromesForDecimalLengthRecursive(
     if (remaining == 1) {
         var lowCounter = low
         for (i in 1..9) {
-            lowCounter += bigtenExponents[edgeSize]
+            lowCounter += BIG_TEN_EXPONENTS[edgeSize]
             checkAllBigNumberPalindromesForDecimalLengthRecursive(
                 high = high,
                 low = lowCounter,
@@ -225,8 +225,8 @@ fun checkAllBigNumberPalindromesForDecimalLengthRecursive(
         var lowCounter = low
         var highCounter = high
         for (i in 1..9) {
-            lowCounter += bigtenExponents[edgeSize]
-            highCounter += bigtenExponents[length - edgeSize - 1]
+            lowCounter += BIG_TEN_EXPONENTS[edgeSize]
+            highCounter += BIG_TEN_EXPONENTS[length - edgeSize - 1]
             checkAllBigNumberPalindromesForDecimalLengthRecursive(
                 high = highCounter,
                 low = lowCounter,
@@ -245,8 +245,8 @@ fun checkAllBigNumberPalindromesForDecimalLengthRecursive(
 /**
  * checks for all the palindromes
  */
-suspend fun checkAllPalindromesForDecimalLength(length: Int, tenExponents: LongArray, longMask: LongArray) {
-    val biggestNum = tenExponents[length + 1]
+suspend fun checkAllPalindromesForDecimalLength(length: Int, longMask: LongArray) {
+    val biggestNum = LONG_TEN_EXPONENTS[length + 1]
     val maxBitIndex = Long.SIZE_BITS - biggestNum.countLeadingZeroBits() - 1
     val n = (length + 1) / 2
 
@@ -259,13 +259,13 @@ suspend fun checkAllPalindromesForDecimalLength(length: Int, tenExponents: LongA
         var num = 0L
         // construct lower half of the number
         for (i in 0 until n) {
-            num += tenExponents[i] * product[i]
+            num += LONG_TEN_EXPONENTS[i] * product[i]
         }
 
         // construct higher half of the number
         val highest = length - n - 1
         for (i in highest downTo 0) {
-            num += tenExponents[n + (highest - i)] * product[i]
+            num += LONG_TEN_EXPONENTS[n + (highest - i)] * product[i]
         }
 
         if (isBinaryPalindrome(num, maxBitIndex, longMask)) {
